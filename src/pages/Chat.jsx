@@ -15,12 +15,16 @@ export function Chat({ user, onLogout }) {
 
   useEffect(() => {
     api('/chat-history').then((data) => {
-      setConversationId(data.conversationId)
-      setMessages(data.messages.length ? data.messages : [WELCOME])
+      setConversationId(data?.conversationId ?? null)
+      setMessages(Array.isArray(data?.messages) && data.messages.length ? data.messages.filter((message) => message && typeof message === 'object') : [WELCOME])
     }).catch((err) => setError(err.message)).finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages, sending])
+  useEffect(() => {
+    if (typeof bottomRef.current?.scrollIntoView === 'function') {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, sending])
 
   const send = async (event) => {
     event.preventDefault()
