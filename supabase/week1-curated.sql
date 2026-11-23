@@ -1,0 +1,24 @@
+-- Öğretmen onaylı 1. hafta soruları; mevcut hesaplar ve sohbetler etkilenmez.
+-- Etkinlik 1'deki eski otomatik üretim yer tutucusu güncellenir.
+BEGIN;
+INSERT INTO public.maya_weeks (id,title,learning_outcome,is_open)
+VALUES (1,'Kesir ve Bölme İlişkisi','MAT.6.1.6',false)
+ON CONFLICT (id) DO UPDATE SET is_open=false;
+INSERT INTO public.maya_activities
+(week_id,activity_no,title,difficulty,problem,hints,answer_key)
+VALUES
+(1,1,'Soru 1','kolay','1/2 kesrinin payını paydasına bölerek ondalık gösterimini bulunuz.','["Payı paydaya böl.","1 ÷ 2 işlemini düşün.","1''i 2''ye bölmek için virgülden sonra sıfır ekle."]'::jsonb,'{"expected":"0,5","source_page":"100","source_section":"Örnek 1-a","mode":"curated"}'::jsonb),
+(1,2,'Soru 2','kolay','3/4 kesrinin ondalık gösterimini bölme işlemi yaparak bulunuz.','["Payı paydaya böl.","3 ÷ 4 işlemini kur.","30 ÷ 4 ile başlayıp kalanla devam et."]'::jsonb,'{"expected":"0,75","source_page":"100","source_section":"Örnek 1-b","mode":"curated"}'::jsonb),
+(1,3,'Soru 3','kolay','Bir bütün pasta 2 kişiye eşit paylaştırılıyor. Her kişiye düşen miktarı kesir ve ondalık gösterimle yazınız.','["Bütün pastayı eşit parçalara ayır.","Bir kişi iki eşit parçadan kaçını alır?","1 ÷ 2 işlemini yap."]'::jsonb,'{"expected":"1/2 = 0,5","source_page":"101","source_section":"Örnek 3-a","mode":"curated"}'::jsonb),
+(1,4,'Soru 4','kolay','2/5 kesrinin ondalık gösterimini bulunuz ve işleminizi açıklayınız.','["Payı paydaya böl.","2 ÷ 5 işlemini yaz.","20 onda birlik 5''e bölünürse kaç onda birlik olur?"]'::jsonb,'{"expected":"0,4","source_page":"100","source_section":"Örnek 1-c","mode":"curated"}'::jsonb),
+(1,5,'Soru 5','orta','12/5, 7/8 ve 81/10 kesirlerini 0,875; 8,1; 2,4 ondalık gösterimleriyle eşleştiriniz.','["Her kesri ayrı ayrı böl.","12 ÷ 5 ile başla.","7 ÷ 8 sonucunu diğer iki sonuçla karşılaştır."]'::jsonb,'{"expected":"12/5=2,4; 7/8=0,875; 81/10=8,1","source_page":"100","source_section":"Örnek 2 (seçme)","mode":"curated"}'::jsonb),
+(1,6,'Soru 6','orta','Bir otomobil 6 litre benzinle 30 kilometre gidiyor. Bir kilometrede kaç litre benzin tüketir?','["Birim miktarı bul.","Toplam litreyi kilometreye böl.","6 ÷ 30 işlemini ondalık gösterime çevir."]'::jsonb,'{"expected":"0,2 litre","source_page":"101","source_section":"Örnek 3-b","mode":"curated"}'::jsonb),
+(1,7,'Soru 7','orta','144 TL, 5 arkadaş arasında eşit paylaştırılıyor. Her biri kaç TL alır?','["Eşit paylaşma için bölme yap.","144 ÷ 5 işlemini kur.","5 × 28 = 140; kalan 4 TL''yi de eşit paylaştır."]'::jsonb,'{"expected":"28,8 TL","source_page":"101","source_section":"Örnek 3-ç","mode":"curated"}'::jsonb),
+(1,8,'Soru 8','orta','1/4 ve 1/3 kesirlerini ondalık gösterime çeviriniz. Sonuçlar arasındaki farkı açıklayınız.','["Her iki kesrin payını paydaya böl.","1 ÷ 4 ve 1 ÷ 3 sonuçlarına bak.","Birinde kalan sıfırlanıyor mu, diğerinde tekrar mı ediyor?"]'::jsonb,'{"expected":"1/4=0,25 sonlu; 1/3=0,333... devirli","source_page":"102","source_section":"Örnek 4","mode":"curated"}'::jsonb),
+(1,9,'Soru 9','zor','1/2, 4/3, 2/9 ve 11/4 kesirlerini ondalık gösterime çevirip sonlu ve devirli olarak sınıflandırınız.','["Her kesirde payı paydaya böl.","Kalanın sıfır olup olmadığına bak.","Tekrarlayan kalanlar devirli gösterim oluşturur."]'::jsonb,'{"expected":"1/2=0,5 sonlu; 4/3=1,333... devirli; 2/9=0,222... devirli; 11/4=2,75 sonlu","source_page":"103","source_section":"Etkinlik 3-1","mode":"curated"}'::jsonb),
+(1,10,'Soru 10','zor','1/2 kesrinin ondalık gösterimi sonluyken 1/3 kesrinin ondalık gösterimi neden devirlidir? Bölme işlemiyle açıklayınız.','["Bölme işlemindeki kalanları izle.","1 ÷ 2 ve 1 ÷ 3 işlemlerini karşılaştır.","Kalan sıfırsa işlem sonlanır; aynı kalan tekrar ederse basamaklar tekrar eder."]'::jsonb,'{"expected":"1/2=0,5 kalan 0; 1/3=0,333... kalan tekrar eder","source_page":"103","source_section":"Etkinlik 3-2","mode":"curated"}'::jsonb),
+(1,11,'Soru 11','zor','2/9 ve 4/3 kesirlerinin ondalık gösterimlerini bulunuz. Tekrar eden rakamları ve kalan örüntüsünü açıklayınız.','["Payları paydalarına böl.","Bölümde tekrar eden rakamlara bak.","Aynı kalan tekrar oluştuğunda sonraki basamak da tekrar eder."]'::jsonb,'{"expected":"2/9=0,222...; 4/3=1,333...; kalanlar tekrar eder","source_page":"103","source_section":"Etkinlik 3-3,4","mode":"curated"}'::jsonb),
+(1,12,'Soru 12','zor','7/11 kesrinin ondalık gösterimini bölmeyle bulunuz ve tekrar eden rakam grubunu devir çizgisiyle gösteriniz.','["7 ÷ 11 işlemini kur.","İlk iki ondalık basamağı hesapla.","63 basamak grubu tekrar eder; üzerine devir çizgisi koy."]'::jsonb,'{"expected":"0,(63)","source_page":"104","source_section":"Örnek 5","mode":"curated"}'::jsonb)
+ON CONFLICT (week_id,activity_no) DO UPDATE
+SET title=EXCLUDED.title,difficulty=EXCLUDED.difficulty,problem=EXCLUDED.problem,hints=EXCLUDED.hints,answer_key=EXCLUDED.answer_key;
+COMMIT;
