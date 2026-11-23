@@ -47,26 +47,36 @@ export async function handler(event) {
     }
 
     const week = assertDb(await supabase.from('maya_weeks').select('id,title,learning_outcome').eq('is_open', true).order('id').limit(1).maybeSingle())
-    const activity = week ? assertDb(await supabase.from('maya_activities').select('id').eq('week_id', week.id).eq('activity_no', 1).maybeSingle()) : null
-    const progress = activity ? assertDb(await supabase.from('maya_progress').select('status,hints_used').eq('student_id', user.id).eq('activity_id', activity.id).maybeSingle()) : null
-    const attempts = activity ? assertDb(await supabase.from('maya_attempts').select('is_correct,support_level').eq('student_id', user.id).eq('activity_id', activity.id).order('created_at', { ascending: false }).limit(12)) : []
-    const independentSuccesses = attempts.filter(a => a.is_correct === true && a.support_level === 0).length
+    const activities = week ? assertDb(await supabase.from('maya_activities').select('id,activity_no,problem,hints,answer_key').eq('week_id',week.id).order('activity_no')) : []
+    const curated = activities.length === 12 && activities.every(a => a.answer_key?.mode === 'curated')
+    const records = curated ? assertDb(await supabase.from('maya_progress').select('activity_id,status,hints_used').eq('student_id',user.id).in('activity_id',activities.map(a=>a.id))) : []
+    const done = new Set(records.filter(p=>p.status==='completed').map(p=>p.activity_id))
+    const activity = curated ? (activities.find(a=>!done.has(a.id)) || null) : null
+    const progress = activity ? records.find(p=>p.activity_id===activity.id) : null
+    const attempts = activity ? assertDb(await supabase.from('maya_attempts').select('is_correct,support_level').eq('student_id',user.id).eq('activity_id',activity.id).order('created_at',{ascending:false}).limit(12)) : []
+    const independentSuccesses = attempts.filter(a=>a.is_correct===true && a.support_level===0).length
     assertDb(await supabase.from('messages').insert({ conversation_id: conversationId, role: 'user', content }))
     const history = assertDb(await supabase.from('messages').select('role, content, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: false }).limit(20))
       .reverse().map(({ role, content: text }) => ({ role, content: text }))
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-    const weeklyPrompt = week && activity ? `
-AKTİF HAFTA: ${week.id}. hafta, ${week.title}; öğrenme çıktısı ${week.learning_outcome}.
-Önceki kayıtlı çözüm denemesi: ${attempts.length}; bağımsız başarılı denemesi: ${independentSuccesses}.
-Yalnızca bu haftanın kazanımına uygun, matematiksel olarak kontrol edilebilir, özgün ve kısa problemler üret. Hazır problem havuzu yoktur.
-Her turda yalnızca bir problem veya tek odaklı ipucu sun. Öğrencinin düşünmesini bekle.
-Zorlanırsa hafif ipucu, belirgin ipucu ve gerekirse modelleme uygula. Öğrencinin çözümünü doğrulamadan başarılı sayma.
-Yeni problemin cevabını önceden hesaplayıp kontrol et. Kazanım dışına çıkma.
-İlk mesaj selamlaşma veya çalışma isteğiyse uygun bir başlangıç problemi öner.
-Yanıtın geçerli JSON olmalı: {"reply":"öğrenciye görünen Türkçe yanıt","correct":null,"support":0}.
-correct: yalnızca matematiksel cevap açıkça doğrulanıyorsa true/false, diğer durumlarda null.
-support: bu turdaki destek düzeyi 0 bağımsız, 1 hafif, 2 belirgin, 3 modelleme. JSON dışında metin yazma.` : ''
+    const weeklyPrompt = week ? (curated ? (activity ? `
+YALNIZCA ÖĞRETMENİN SEÇTİĞİ SORULAR KULLANILIR. ASLA YENİ SORU ÜRETME.
+HAFTA ${week.id}, kazanım ${week.learning_outcome}.
+ŞU ANKİ SORU ${activity.activity_no}/12: ${activity.problem}
+DOĞRU CEVAP (öğrenciye gösterme): ${activity.answer_key.expected}
+İPUÇLARI (sırayla): ${JSON.stringify(activity.hints)}
+Önceki deneme sayısı: ${attempts.length}; mevcut soru için ipucu kullanımı: ${progress?.hints_used||0}.
+Öğrencinin son mesajı soruya yanıt değilse soruyu sor. Yanıtsa matematiksel olarak değerlendir.
+Yanlışsa doğru cevabı açıklamadan uygun ipucu ver. Doğruysa kısa dönüt ver; yeni soruyu kendin yazma.
+Kaynak, sayfa, etkinlik adı, cevap anahtarı veya sonraki soruları gösterme.
+Yalnızca geçerli JSON: {"reply":"Türkçe öğrenci yanıtı","correct":null,"support":0}.
+correct: yalnızca mevcut soruya verilen yanıt doğrulanıyorsa true/false, aksi hâlde null.
+support: 0 bağımsız, 1 hafif, 2 belirgin, 3 modelleme. ` : `
+Öğretmenin 12 sorusu tamamlandı. Öğrenciye çalışmanın tamamlandığını söyle. Yeni soru üretme.
+Yalnızca JSON: {"reply":"Türkçe yanıt","correct":null,"support":0}.`) : `
+Haftalık soru havuzu henüz öğretmen tarafından kurulmadı. Soru üretme.
+Öğrenciye etkinliğin hazırlanmakta olduğunu söyle.`) : ''
     const completion = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
       temperature: 0.55,
@@ -75,7 +85,7 @@ support: bu turdaki destek düzeyi 0 bağımsız, 1 hafif, 2 belirgin, 3 modelle
     })
     const rawAnswer = completion.choices[0]?.message?.content?.trim()
     let metadata = null
-    if (week && activity) {
+    if (week) {
       try {
         const parsed = JSON.parse(rawAnswer)
         if (typeof parsed.reply === 'string' && parsed.reply.trim()) metadata = parsed
@@ -84,19 +94,16 @@ support: bu turdaki destek düzeyi 0 bağımsız, 1 hafif, 2 belirgin, 3 modelle
     const answer = metadata ? metadata.reply.trim() : rawAnswer
     if (!answer) throw new Error('Yapay zekâ boş yanıt döndürdü.')
     const message = assertDb(await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: answer }).select('id, role, content, created_at').single())
-    if (week && activity) {
-      const support = metadata && Number.isInteger(metadata.support) ? Math.max(0, Math.min(3, metadata.support)) : 0
-      const correct = metadata && typeof metadata.correct === 'boolean' ? metadata.correct : null
-      assertDb(await supabase.from('maya_attempts').insert({
-        student_id: user.id, activity_id: activity.id, response: content,
-        is_correct: correct, support_level: support,
-      }))
+    if (week && activity && curated) {
+      const support = metadata && Number.isInteger(metadata.support) ? Math.max(0,Math.min(3,metadata.support)) : 0
+      const correct = metadata && typeof metadata.correct==='boolean' ? metadata.correct : null
+      assertDb(await supabase.from('maya_attempts').insert({student_id:user.id,activity_id:activity.id,response:content,is_correct:correct,support_level:support}))
       assertDb(await supabase.from('maya_progress').upsert({
-        student_id: user.id, activity_id: activity.id,
-        status: progress?.status === 'completed' ? 'completed' : 'in_progress',
-        hints_used: (progress?.hints_used || 0) + (support > 0 ? 1 : 0),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'student_id,activity_id' }))
+        student_id:user.id,activity_id:activity.id,
+        status:correct===true?'completed':'in_progress',
+        hints_used:(progress?.hints_used||0)+(support>0?1:0),
+        updated_at:new Date().toISOString()
+      },{onConflict:'student_id,activity_id'}))
     }
     return json(200, { conversationId, message })
   } catch (error) {
