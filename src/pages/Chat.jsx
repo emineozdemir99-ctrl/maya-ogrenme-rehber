@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api, formatDate } from '../lib/api.js'
 import { Logo } from '../components/Logo.jsx'
 
-const WELCOME = { role: 'assistant', content: 'Merhaba! Ben Maya. Bugün hangi matematik konusu üzerine düşünmek istersin? Birlikte adım adım ilerleyebiliriz. 🌱' }
+const WELCOME = { role: 'assistant', content: 'Merhaba! Ben Maya. Hazırsan bu haftanın matematik çalışmasına başlayalım. 🌱' }
 
 export function Chat({ user, onLogout }) {
   const [messages, setMessages] = useState([])
@@ -60,8 +60,8 @@ export function Chat({ user, onLogout }) {
         <div className="chat-heading"><div className="maya-avatar">M</div><div><h1>Maya ile Matematik</h1><p><span className="online-dot" /> Düşünmeye hazırım</p></div></div>
         {weekly?.week && <section className="card" style={{ marginBottom: 12, padding: 16 }}>
           <strong>{weekly.week.id}. Hafta · {weekly.week.title}</strong>
-          <p style={{ marginTop: 6 }}>Kazanım: {weekly.week.learning_outcome} · Kayıtlı deneme: {weekly.attempts ?? 0} · İpucu: {weekly.progress?.hints_used ?? 0}</p>
-          <p style={{ marginTop: 6 }}>Kendi hızında ilerle. Maya'dan yeni bir problem veya ipucu isteyebilirsin.</p>
+          <p style={{ marginTop: 6 }}>Kazanım: {weekly.week.learning_outcome} · Tamamlanan: {weekly.completed ?? 0}/12 · İpucu: {weekly.progress?.hints_used ?? 0}</p>
+          <p style={{ marginTop: 6 }}>Kendi hızında ilerle. Soruları sırayla çöz; zorlandığında Maya'dan ipucu iste.</p>
           {!weekly.configured && <p>Öğretmen etkinliği henüz etkinleştirmedi.</p>}
         </section>}
         <section className="messages" aria-live="polite">
