@@ -11,9 +11,11 @@ export function Chat({ user, onLogout }) {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [weekly, setWeekly] = useState(null)
   const bottomRef = useRef(null)
 
   useEffect(() => {
+    api('/weekly-progress').then(setWeekly).catch(() => {})
     api('/chat-history').then((data) => {
       setConversationId(data?.conversationId ?? null)
       setMessages(Array.isArray(data?.messages) && data.messages.length ? data.messages.filter((message) => message && typeof message === 'object') : [WELCOME])
@@ -38,6 +40,7 @@ export function Chat({ user, onLogout }) {
       const data = await api('/chat', { method: 'POST', body: JSON.stringify({ content, conversationId }) })
       setConversationId(data.conversationId)
       setMessages((current) => [...current, data.message])
+      api('/weekly-progress').then(setWeekly).catch(() => {})
     } catch (err) {
       setError(err.message)
       setMessages((current) => current.filter((message, index) => !(index === current.length - 1 && message.role === 'user' && message.content === content)))
@@ -55,6 +58,12 @@ export function Chat({ user, onLogout }) {
       </header>
       <main className="chat-main">
         <div className="chat-heading"><div className="maya-avatar">M</div><div><h1>Maya ile Matematik</h1><p><span className="online-dot" /> Düşünmeye hazırım</p></div></div>
+        {weekly?.week && <section className="card" style={{ marginBottom: 12, padding: 16 }}>
+          <strong>{weekly.week.id}. Hafta · {weekly.week.title}</strong>
+          <p style={{ marginTop: 6 }}>Kazanım: {weekly.week.learning_outcome} · Kayıtlı deneme: {weekly.attempts ?? 0} · İpucu: {weekly.progress?.hints_used ?? 0}</p>
+          <p style={{ marginTop: 6 }}>Kendi hızında ilerle. Maya'dan yeni bir problem veya ipucu isteyebilirsin.</p>
+          {!weekly.configured && <p>Öğretmen etkinliği henüz etkinleştirmedi.</p>}
+        </section>}
         <section className="messages" aria-live="polite">
           {loading && <div className="center-note">Sohbetin hazırlanıyor…</div>}
           {!loading && messages.map((message, index) => (
