@@ -55,9 +55,9 @@ export function TeacherDashboard({ user, onLogout }) {
           {weekData?.week && <section className="card" style={{ marginBottom: 20, padding: 20 }}>
             <h2>1. Hafta · {weekData.week.title}</h2>
             <p>Kazanım: {weekData.week.learning_outcome} · Durum: {weekData.week.is_open ? 'Açık' : 'Kapalı'}</p>
-            {!weekData.configured ? <p>Uyarlanabilir etkinlik kaydı henüz eklenmedi.</p> :
-              <div className="table-wrap"><table><thead><tr><th>Öğrenci no.</th><th>Sınıf</th><th>Deneme</th><th>İpucu</th><th>Bağımsız doğru*</th></tr></thead>
-                <tbody>{weekData.students.map(s => <tr key={s.student_no}><td>{s.student_no}</td><td>{s.class_name}</td><td>{s.attempts}</td><td>{s.hints_used}</td><td>{s.independent_successes}</td></tr>)}</tbody>
+            {!weekData.configured ? <p>12 soruluk haftalık etkinlik havuzu henüz hazır değil.</p> :
+              <div className="table-wrap"><table><thead><tr><th>Öğrenci no.</th><th>Sınıf</th><th>Tamamlanan</th><th>Deneme</th><th>İpucu</th><th>Bağımsız doğru*</th></tr></thead>
+                <tbody>{weekData.students.map(s => <tr key={s.student_no}><td>{s.student_no}</td><td>{s.class_name}</td><td>{s.completed ?? 0}/12</td><td>{s.attempts}</td><td>{s.hints_used}</td><td>{s.independent_successes}</td></tr>)}</tbody>
               </table><p style={{ padding: 10 }}>*Yapay zekâ tarafından tahmini sınıflandırmadır; başarı testi puanı değildir.</p></div>}
           </section>}
           <section className="dashboard-grid">
