@@ -91,20 +91,33 @@ Haftalık soru havuzu henüz öğretmen tarafından kurulmadı. Soru üretme.
         if (typeof parsed.reply === 'string' && parsed.reply.trim()) metadata = parsed
       } catch { /* Düz metin yanıtı sohbeti kesmesin. */ }
     }
-    const answer = metadata ? metadata.reply.trim() : rawAnswer
+    let answer = metadata ? metadata.reply.trim() : rawAnswer
     if (!answer) throw new Error('Yapay zekâ boş yanıt döndürdü.')
-    const message = assertDb(await supabase.from('messages').insert({ conversation_id: conversationId, role: 'assistant', content: answer }).select('id, role, content, created_at').single())
+    // Progress must never revert a completed question to in_progress.
+    // The next question is selected by the server, not invented by the model.
     if (week && activity && curated) {
       const support = metadata && Number.isInteger(metadata.support) ? Math.max(0,Math.min(3,metadata.support)) : 0
       const correct = metadata && typeof metadata.correct==='boolean' ? metadata.correct : null
-      assertDb(await supabase.from('maya_attempts').insert({student_id:user.id,activity_id:activity.id,response:content,is_correct:correct,support_level:support}))
+      const previouslyCompleted = progress?.status === 'completed'
+      assertDb(await supabase.from('maya_attempts').insert({
+        student_id:user.id,activity_id:activity.id,response:content,is_correct:correct,support_level:support
+      }))
       assertDb(await supabase.from('maya_progress').upsert({
         student_id:user.id,activity_id:activity.id,
-        status:correct===true?'completed':'in_progress',
+        status:correct===true || previouslyCompleted ? 'completed':'in_progress',
         hints_used:(progress?.hints_used||0)+(support>0?1:0),
         updated_at:new Date().toISOString()
       },{onConflict:'student_id,activity_id'}))
+      if (correct === true) {
+        const next = activities.find(a=>a.activity_no>activity.activity_no)
+        answer += next
+          ? `\\n\\nSoru ${next.activity_no}/${activities.length}: ${next.problem}`
+          : '\\n\\nTebrikler! Bu haftanın 12 sorusunu tamamladın.'
+      }
     }
+    const message = assertDb(await supabase.from('messages').insert({
+      conversation_id: conversationId, role: 'assistant', content: answer
+    }).select('id, role, content, created_at').single())
     return json(200, { conversationId, message })
   } catch (error) {
     if (error?.status === 429 && error?.code === 'insufficient_quota') {
